@@ -3,18 +3,32 @@ const axios = require('axios');
 const cors = require('cors');
 
 const PORT = 3210
+const placeholdingUri = 'https://jsonplaceholder.typicode.com/photos'
 
 const app = express();
 const crossOrigin = cors();
 app.use(crossOrigin);
 
 app.get(
-    '/echo',
+    '/photos',
     async(req, res) => {
-        const baseUrl = req.protocol + '://' + req.headers.host + '/';
-        const reqUrl = new URL(req.url, baseUrl);
-        let reply = `Hello from axios. ${reqUrl}. ${req.body}`
-        res.json(reply)
+        const albumID = req.query.albumID;
+        const { data } = await axios.get(
+            placeholdingUri,                // 200 OK 1052 ms 870.84 KB
+            {params: {albumID}}
+            );  
+        res.json(data);
+    }
+)
+
+app.get(
+    '/photos/:id',
+    async(req, res) => {
+        const singleItemUri = placeholdingUri + '/' + req.params.id;
+        console.log(singleItemUri)
+        const { data } = await axios.get(singleItemUri);  // 200 OK 445 ms 448 B
+        
+        res.json(data);
     }
 )
 
