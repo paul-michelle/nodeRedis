@@ -19,13 +19,16 @@ app.use(express.urlencoded({ extended: true}));
 app.get(
     '/photos',
     async (req, res) => {
-        const albumID = req.query.albumID;
-        const dataAlreadyStoredInRedis = await redisCli.get('photos');
+        const albumId = req.query.albumId;
+        const dataAlreadyStoredInRedis = await redisCli.get(`photos?albumId=${albumId}`);
         if (dataAlreadyStoredInRedis) {
             return res.json(JSON.parse(dataAlreadyStoredInRedis))
         }
-        const { data: dataToStoreInRedis } = await axios.get(placeholdingUri, {params: {albumID}});
-        redisCli.setEx('photos', EXPIRATION_TIME, JSON.stringify(dataToStoreInRedis));
+        const { data: dataToStoreInRedis } = await axios.get(placeholdingUri, {params: {'albumId': albumId}});
+        redisCli.setEx(`photos?albumId=${albumId}`, 
+                        EXPIRATION_TIME, 
+                        JSON.stringify(dataToStoreInRedis)
+                        );
         res.json(dataToStoreInRedis);
     }
     );
