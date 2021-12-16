@@ -4,7 +4,7 @@ const cors = require('cors');
 const Redis = require('redis');
 
 const PORT = 3211;
-const placeholdingUri = 'https://jsonplaceholder.typicode.com/photos';
+const BASE_URI = 'https://jsonplaceholder.typicode.com/photos';
 const EXPIRATION_TIME = 3600;
 
 const redisCli = Redis.createClient();
@@ -19,28 +19,37 @@ app.use(express.urlencoded({ extended: true}));
 app.get(
     '/photos',
     async (req, res) => {
+        let multimpleItemsUri = BASE_URI;
         const albumId = req.query.albumId;
-        const dataAlreadyStoredInRedis = await redisCli.get(`photos?albumId=${albumId}`);
-        if (dataAlreadyStoredInRedis) {
-            return res.json(JSON.parse(dataAlreadyStoredInRedis))
+        if (albumId) {
+            multimpleItemsUri += `?albumId=${albumId}`
         }
-        const { data: dataToStoreInRedis } = await axios.get(placeholdingUri, {params: {'albumId': albumId}});
-        redisCli.setEx(`photos?albumId=${albumId}`, 
-                        EXPIRATION_TIME, 
-                        JSON.stringify(dataToStoreInRedis)
-                        );
-        res.json(dataToStoreInRedis);
+        const data = await getOrSetCache(multimpleItemsUri);
+        res.json(data);
     }
     );
 
 app.get(
     '/photos/:id',
     async(req, res) => {
-        const singleItemUri = placeholdingUri + '/' + req.params.id;
+        const singleItemUri = BASE_URI + '/' + req.params.id;
         const { data } = await axios.get(singleItemUri);
         
         res.json(data);
     }
 );
+
+async function getOrSetCache(key) {
+    const dataAlreadyStoredInRedis = await redisCli.get(key);
+    if (dataAlreadyStoredInRedis) {
+        return JSON.parse(dataAlreadyStoredInRedis);
+    }
+    const { data: dataToStoreInRedis } = await axios.get(key);
+    redisCli.setEx(
+        key, EXPIRATION_TIME, JSON.stringify(dataToStoreInRedis)
+        );
+    return dataToStoreInRedis;
+}
+
 
 app.listen(PORT);
