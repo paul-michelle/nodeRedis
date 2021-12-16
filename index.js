@@ -33,18 +33,17 @@ app.get(
     '/photos/:id',
     async(req, res) => {
         const singleItemUri = BASE_URI + '/' + req.params.id;
-        const { data } = await axios.get(singleItemUri);
-        
+        const data = await getOrSetCache(singleItemUri);
         res.json(data);
     }
 );
 
 async function getOrSetCache(key) {
-    const dataAlreadyStoredInRedis = await redisCli.get(key);
+    const dataAlreadyStoredInRedis = await redisCli.get(key);       // 20 ms 870.84 KB; 4 ms 452 B => extremely faster
     if (dataAlreadyStoredInRedis) {
         return JSON.parse(dataAlreadyStoredInRedis);
     }
-    const { data: dataToStoreInRedis } = await axios.get(key);
+    const { data: dataToStoreInRedis } = await axios.get(key);      // 857 ms 870.84 KB; 234 ms 452 B
     redisCli.setEx(
         key, EXPIRATION_TIME, JSON.stringify(dataToStoreInRedis)
         );
